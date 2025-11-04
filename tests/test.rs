@@ -15,7 +15,7 @@ mod tests {
     };
 
     #[test]
-    fn test_initialize_counter() {
+    fn test_counter() {
         let mut svm = LiteSVM::new();
         let payer_keypair = Keypair::new();
         let payer = payer_keypair.pubkey();
@@ -29,6 +29,8 @@ mod tests {
 
         let counter_keypair = Keypair::new();
         let counter = counter_keypair.pubkey();
+
+        // ------------------------- initialize the counter -------------------------
 
         // random initial value
         let initial_value = rand::random::<u64>() % 1000000;
@@ -64,13 +66,46 @@ mod tests {
             }
         }
 
-        // read the counter account
+        // ------------------------- read the counter account -------------------------
         let counter_account_data = svm.get_account(&counter).unwrap().data;
         let counter_account = CounterAccount::try_from_slice(&counter_account_data).unwrap();
 
         println!("{:?}", counter_account);
 
         assert_eq!(counter_account.count, initial_value);
+
+        // ------------------------- increment the counter -------------------------
+        let instruction_data = to_vec(&CounterInstruction::IncrementCounter).unwrap();
+        let instruction = Instruction::new_with_bytes(
+            program_id,
+            &instruction_data,
+            vec![AccountMeta::new(counter, false)],
+        );
+        let message = Message::new(&[instruction], Some(&payer));
+        let blockhash = svm.latest_blockhash();
+        let transaction = Transaction::new(&[&payer_keypair], message, blockhash);
+
+        // Send the transaction
+        let result = svm.send_transaction(transaction);
+        match result {
+            Ok(response) => {
+                println!("Transaction successful!");
+                let logs = response.logs;
+                println!("Logs: {:?}", logs);
+            }
+            Err(e) => {
+                eprintln!("Transaction failed: {:?}", e);
+                // panic!("Transaction failed: {:?}", e);
+            }
+        }
+
+        // ------------------------- read the counter account -------------------------
+        let counter_account_data = svm.get_account(&counter).unwrap().data;
+        let counter_account = CounterAccount::try_from_slice(&counter_account_data).unwrap();
+
+        println!("{:?}", counter_account);
+
+        assert_eq!(counter_account.count, initial_value + 1);
     }
 
     #[test]

@@ -12,7 +12,6 @@ use solana_program::{
     sysvar::{rent::Rent, Sysvar},
 };
 
-
 use crate::{instruction::CounterInstruction, state::CounterAccount};
 
 pub struct Processor {}
