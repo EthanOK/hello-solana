@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use borsh::to_vec;
-    use hello_solana::instruction::CounterInstruction;
+    use borsh::{to_vec, BorshDeserialize};
+    use hello_solana::{instruction::CounterInstruction, state::CounterAccount};
     use litesvm::LiteSVM;
     use mollusk_svm::{result::Check, Mollusk};
     use solana_program::{native_token::LAMPORTS_PER_SOL, system_program::ID as SYSTEM_PROGRAM_ID};
@@ -28,18 +28,21 @@ mod tests {
             .unwrap();
 
         let counter_keypair = Keypair::new();
-        let counter_account = counter_keypair.pubkey();
+        let counter = counter_keypair.pubkey();
+
+        // random initial value
+        let initial_value = rand::random::<u64>() % 1000000;
 
         // Build Transaction
         let instruction_data =
-            to_vec(&CounterInstruction::InitializeCounter { initial_value: 1 }).unwrap();
+            to_vec(&CounterInstruction::InitializeCounter { initial_value }).unwrap();
 
         let instruction = Instruction::new_with_bytes(
             program_id,
             &instruction_data,
             vec![
-                AccountMeta::new(counter_account, true), // counter account (必须是签名者才能创建)
-                AccountMeta::new(payer, true),           // payer (签名者)
+                AccountMeta::new(counter, true), // counter account (必须是签名者才能创建)
+                AccountMeta::new(payer, true),   // payer (签名者)
                 AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false), // system program
             ],
         );
@@ -60,6 +63,14 @@ mod tests {
                 // panic!("Transaction failed: {:?}", e);
             }
         }
+
+        // read the counter account
+        let counter_account_data = svm.get_account(&counter).unwrap().data;
+        let counter_account = CounterAccount::try_from_slice(&counter_account_data).unwrap();
+
+        println!("{:?}", counter_account);
+
+        assert_eq!(counter_account.count, initial_value);
     }
 
     #[test]

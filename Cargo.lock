@@ -1504,6 +1504,7 @@ dependencies = [
  "litesvm",
  "mollusk-svm",
  "mollusk-svm-bencher",
+ "rand 0.9.2",
  "solana-client",
  "solana-program",
  "solana-sdk",
